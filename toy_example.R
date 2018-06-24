@@ -39,6 +39,18 @@ model.selection.output <- modelSelection(df.training = data.norm$trainTransforme
 
 ## Prediction on testing set and evaluation
 ## [Note]: user needs to provide the prevalence for the positive case
-test.output <- predictAndEvaluation(model.best = model.selection.output$model.best,
+
+# The performance of the single best model
+predicttion.single.best <- predictAndEvaluation(model.best = model.selection.output$model.best,
                                     test.data = data.norm$testTransformed,
-                                    prevalence = 0.1)
+                                    prevalence = 0.1,
+                                    is.ensemble = FALSE)
+
+# The performance of the ensemble model
+predicttion.ensemble <- predictAndEvaluation(model.best = model.selection.output$model.ensemble,
+                                    test.data = data.norm$testTransformed,
+                                    prevalence = 0.1,
+                                    is.ensemble = TRUE)
+
+
+

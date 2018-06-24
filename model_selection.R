@@ -3,9 +3,9 @@ require(mlbench)
 require(DESeq2)
 require(ggplot2)
 require(plotROC)
-
-
-
+require(caretEnsemble)
+require(pROC)
+library("caTools")
 
 ############### functions define ##############
 
@@ -110,6 +110,7 @@ fitControl <- trainControl(method = "repeatedcv",
                            repeats = num.cv.repeat,
                            ## Estimate class probabilities
                            classProbs = TRUE,
+                           savePredictions = TRUE,
                            ## parallel in windows:
                            allowParallel = TRUE,
                            ## Evaluate performance using
@@ -127,6 +128,26 @@ for (i in 1:length(model.names)){
                                            seed.use)
 }
 names(list.model.fit) <- model.names
+
+# add ensemble model
+
+### correlation between models
+roc.scatter.plot <- xyplot(resamples(model_list))
+roc.cor <- modelCor(resamples(model_list))
+
+tmp.list <- list.model.fit
+class(tmp.list) <- "caretList"
+set.seed(seed.use)
+greedy_ensemble <- caretEnsemble(
+  tmp.list, 
+  metric="ROC",
+  trControl=fitControl)
+
+
+list.model.fit[[(length(list.model.fit) + 1)]] <- greedy_ensemble$ens_model
+names(list.model.fit)[length(list.model.fit)] <- "Ensemble"
+
+
 
 # compare models using their best params
 resamps <- resamples(list.model.fit)
@@ -163,7 +184,10 @@ print("Finished.")
 return(list(list.model.fit = list.model.fit,
             df.model.summary = df.model.summary,
             comparison.plot = plot.handle,
-            model.best = model.best))
+            model.best = model.best,
+            model.ensemble = greedy_ensemble,
+            roc.scatter.plot = roc.scatter.plot,
+            roc.cor = roc.cor))
 }
 
 
@@ -187,7 +211,8 @@ caretModelTraining <- function(df.training, model.name, fitControl, num.param.tu
 ### predict and evaluate functions
 predictAndEvaluation <- function(model.best,
                                  test.data,
-                                 prevalence){
+                                 prevalence,
+                                 is.ensemble = FALSE){
     # create a numerical class var
     class.num <- as.character(test.data$Class)
     class.num[class.num == "P"] <- 1
@@ -199,15 +224,29 @@ predictAndEvaluation <- function(model.best,
     test.prediction.prob <- predict(model.best, newdata = test.data, type = "prob")
 
     ### ROC and AUC
-    g <- ggplot(test.prediction.prob, aes(m=P, d=class.num)) +
-    geom_roc(n.cuts=0) +
-    coord_equal() +
-    style_roc()
-    auc.value <- round((calc_auc(g))$AUC, 4)
-    g <- g + annotate("text", x=0.75, y=0.25, label=paste("AUC =", auc.value))
+    if (is.ensemble == FALSE){
+        g <- ggplot(test.prediction.prob, aes(m=P, d=class.num)) +
+        geom_roc(n.cuts=0) +
+        coord_equal() +
+        style_roc()
+        auc.value <- round((calc_auc(g))$AUC, 4)
+        g <- g + annotate("text", x=0.75, y=0.25, label=paste("AUC =", auc.value))
+    
+        #### get probabilities for POSITIVE
+        model.prob = test.prediction.prob[,2]
+    } else{
+        prob.df <- data.frame(N = rep(1,length(test.prediction.prob)), P = test.prediction.prob)
+        g <- ggplot(prob.df, aes(m=P, d=class.num)) +
+        geom_roc(n.cuts=0) +
+        coord_equal() +
+        style_roc()
+        auc.value <- round((calc_auc(g))$AUC, 4)
+        g <- g + annotate("text", x=0.75, y=0.25, label=paste("AUC =", auc.value))
+    
+        #### get probabilities for POSITIVE
+        model.prob = test.prediction.prob
+    }
 
-    #### get probabilities for POSITIVE
-    model.prob = test.prediction.prob[,2]
 
     ## get sens and spec, ppv and npv (require prevalence!)
     test.prediction.evaluation <- Get_Sensitivity_And_Specificity(predict = model.prob,
