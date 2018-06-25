@@ -131,12 +131,15 @@ names(list.model.fit) <- model.names
 
 # add ensemble model
 
-### correlation between models
-roc.scatter.plot <- xyplot(resamples(model_list))
-roc.cor <- modelCor(resamples(model_list))
+
 
 tmp.list <- list.model.fit
 class(tmp.list) <- "caretList"
+
+### correlation between models
+roc.scatter.plot <- xyplot(resamples(tmp.list))
+roc.cor <- modelCor(resamples(tmp.list))
+
 set.seed(seed.use)
 greedy_ensemble <- caretEnsemble(
   tmp.list, 
@@ -198,12 +201,21 @@ return(list(list.model.fit = list.model.fit,
 # The last column is the label factor with colname: "Class"
 caretModelTraining <- function(df.training, model.name, fitControl, num.param.tune, seed.use){
   set.seed(seed.use)
-  modelFit <- train(Class ~ ., data = df.training,
+  if (model.name %in% c("glm", "glmnet")){
+      modelFit <- train(Class ~ ., data = df.training,
+                 method = model.name,
+                 trControl = fitControl,
+                 tuneLength = num.param.tune,
+                 metric = "ROC")
+  } else{
+      modelFit <- train(Class ~ ., data = df.training,
                  method = model.name,
                  trControl = fitControl,
                  tuneLength = num.param.tune,
                  metric = "ROC",
                  verbose = FALSE)
+  }
+
   return(modelFit)
 }
 
@@ -235,7 +247,7 @@ predictAndEvaluation <- function(model.best,
         #### get probabilities for POSITIVE
         model.prob = test.prediction.prob[,2]
     } else{
-        prob.df <- data.frame(N = rep(1,length(test.prediction.prob)), P = test.prediction.prob)
+        prob.df <- data.frame(P = 1-test.prediction.prob, N = test.prediction.prob)
         g <- ggplot(prob.df, aes(m=P, d=class.num)) +
         geom_roc(n.cuts=0) +
         coord_equal() +
@@ -244,7 +256,7 @@ predictAndEvaluation <- function(model.best,
         g <- g + annotate("text", x=0.75, y=0.25, label=paste("AUC =", auc.value))
     
         #### get probabilities for POSITIVE
-        model.prob = test.prediction.prob
+        model.prob = 1-test.prediction.prob
     }
 
 
