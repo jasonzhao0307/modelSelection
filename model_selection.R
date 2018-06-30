@@ -137,7 +137,6 @@ tmp.list <- list.model.fit
 class(tmp.list) <- "caretList"
 
 ### correlation between models
-roc.scatter.plot <- xyplot(resamples(tmp.list))
 roc.cor <- modelCor(resamples(tmp.list))
 
 set.seed(seed.use)
@@ -189,7 +188,6 @@ return(list(list.model.fit = list.model.fit,
             comparison.plot = plot.handle,
             model.best = model.best,
             model.ensemble = greedy_ensemble,
-            roc.scatter.plot = roc.scatter.plot,
             roc.cor = roc.cor))
 }
 
@@ -247,7 +245,7 @@ predictAndEvaluation <- function(model.best,
         #### get probabilities for POSITIVE
         model.prob = test.prediction.prob[,2]
     } else{
-        prob.df <- data.frame(P = 1-test.prediction.prob, N = test.prediction.prob)
+        prob.df <- data.frame(P = test.prediction.prob, N = 1-test.prediction.prob)
         g <- ggplot(prob.df, aes(m=P, d=class.num)) +
         geom_roc(n.cuts=0) +
         coord_equal() +
@@ -256,7 +254,7 @@ predictAndEvaluation <- function(model.best,
         g <- g + annotate("text", x=0.75, y=0.25, label=paste("AUC =", auc.value))
     
         #### get probabilities for POSITIVE
-        model.prob = 1-test.prediction.prob
+        model.prob = test.prediction.prob
     }
 
 

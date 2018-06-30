@@ -30,7 +30,7 @@ data.norm <- normData(training = data.prepared$training,
 ### Model selection
 
 model.selection.output <- modelSelection(df.training = data.norm$trainTransformed,
-                      model.names = c("gbm", "svmLinear"),
+                      model.names = c("gbm", "svmLinear", "glmnet"),
                       num.cv.fold = 5,
                       num.cv.repeat = 5,
                       num.param.tune = 6,
