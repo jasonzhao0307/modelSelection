@@ -11,7 +11,7 @@ source("model_selection.R")
 # - df.testing, with rows being samples, columns being variables.
 # - y.train, a binary vector
 # - y.test, a binary vector
-data.example <- readRDS("model_selection_example_data.RDS")
+data.example <- readRDS("../../modelSelection/model_selection_example_data.RDS")
 
 
 # prepare the data to make the format useable by the pipeline
@@ -30,7 +30,7 @@ data.norm <- normData(training = data.prepared$training,
 ### Model selection
 
 model.selection.output <- modelSelection(df.training = data.norm$trainTransformed,
-                      model.names = c("gbm", "svmLinear", "glmnet"),
+                      model.names = c("gbm", "glmnet"),
                       num.cv.fold = 5,
                       num.cv.repeat = 5,
                       num.param.tune = 6,

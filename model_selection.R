@@ -30,7 +30,7 @@ Get_Sensitivity_And_Specificity <- function(predict, response, provide.cutoff = 
   # Must specify which class is positive !!!
   # also, in this case, we need to use character.
   # provide prevalence!!
-  cm = confusionMatrix(as.character(pred), as.character(response), positive = "1", prevalence = prevalence)
+  cm = confusionMatrix(as.factor(pred), as.factor(response), positive = "1", prevalence = prevalence)
   sensi <- cm$byClass[1]
   speci <- cm$byClass[2]
   ppv <- cm$byClass[3]
@@ -80,10 +80,13 @@ prepareData <- function(df.training, df.testing, y.train, y.test, positive){
   y.test[y.test.tmp == as.character(positive)] <- "P"
   training <- cbind(df.training, y.train)
   testing <- cbind(df.testing, y.test)
-  training$y.train <- as.factor(training$y.train)
-  testing$y.test <- as.factor(testing$y.test)
+  #training$y.train <- as.factor(training$y.train)
+  #testing$y.test <- as.factor(testing$y.test)
+  training$y.train <- as.character(training$y.train)
+  testing$y.test <- as.character(testing$y.test)
   colnames(training)[ncol(training)] <- "Class"
   colnames(testing)[ncol(testing)] <- "Class"
+
   return(list(training = training, testing = testing))
 }
 
@@ -141,7 +144,7 @@ roc.cor <- modelCor(resamples(tmp.list))
 
 set.seed(seed.use)
 greedy_ensemble <- caretEnsemble(
-  tmp.list, 
+  tmp.list,
   metric="ROC",
   trControl=fitControl)
 
@@ -231,8 +234,9 @@ predictAndEvaluation <- function(model.best,
 
     ## predict
     test.prediction <- predict(model.best, newdata = test.data)
+    #print(test.prediction)
     test.prediction.prob <- predict(model.best, newdata = test.data, type = "prob")
-
+    #return(test.prediction.prob)
     ### ROC and AUC
     if (is.ensemble == FALSE){
         g <- ggplot(test.prediction.prob, aes(m=P, d=class.num)) +
@@ -241,7 +245,7 @@ predictAndEvaluation <- function(model.best,
         style_roc()
         auc.value <- round((calc_auc(g))$AUC, 4)
         g <- g + annotate("text", x=0.75, y=0.25, label=paste("AUC =", auc.value))
-    
+
         #### get probabilities for POSITIVE
         model.prob = test.prediction.prob[,2]
     } else{
@@ -251,13 +255,24 @@ predictAndEvaluation <- function(model.best,
         coord_equal() +
         style_roc()
         auc.value <- round((calc_auc(g))$AUC, 4)
-        g <- g + annotate("text", x=0.75, y=0.25, label=paste("AUC =", auc.value))
-    
         #### get probabilities for POSITIVE
         model.prob = test.prediction.prob
+        if (auc.value < 0.5){
+          prob.df <- data.frame(P = 1-test.prediction.prob, N = test.prediction.prob)
+          g <- ggplot(prob.df, aes(m=P, d=class.num)) +
+          geom_roc(n.cuts=0) +
+          coord_equal() +
+          style_roc()
+          auc.value <- round((calc_auc(g))$AUC, 4)
+          #### get probabilities for POSITIVE
+          model.prob = 1-test.prediction.prob
+        }
+        g <- g + annotate("text", x=0.75, y=0.25, label=paste("AUC =", auc.value))
+
+
     }
 
-
+    #return(list(predict = model.prob, response = class.num))
     ## get sens and spec, ppv and npv (require prevalence!)
     test.prediction.evaluation <- Get_Sensitivity_And_Specificity(predict = model.prob,
                                     response = class.num,
