@@ -178,10 +178,6 @@ trellis.par.set(theme1)
 plot.handle <- bwplot(resamps, layout = c(3, 1))
 
 
-### find the best model by finding the largest median AUC
-model.best.index <- which(df.model.summary[,1] ==
-                            max(df.model.summary[,1]))
-model.best <- list.model.fit[[model.best.index]]
 
 
 print("Finished.")
@@ -189,7 +185,6 @@ print("Finished.")
 return(list(list.model.fit = list.model.fit,
             df.model.summary = df.model.summary,
             comparison.plot = plot.handle,
-            model.best = model.best,
             model.ensemble = greedy_ensemble,
             roc.cor = roc.cor))
 }
