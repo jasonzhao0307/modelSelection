@@ -1,9 +1,17 @@
+#########################
+# Author: Yue (Jason) Zhao
+# Github: https://github.com/jasonzhao0307
+
+
+
+
 # load all functions
 source("model_selection.R")
 
 
 
 ########   Example   ########
+
 
 # load example dataset
 # we have 4 objects here:
@@ -12,6 +20,16 @@ source("model_selection.R")
 # - y.train, a binary vector
 # - y.test, a binary vector
 data.example <- readRDS("../../modelSelection/model_selection_example_data.RDS")
+
+
+
+# Missing values process:
+# if df.training or df.testing has NA values, users could use the
+# code below to do missing value imputation:
+
+# mice_mod <- mice(df.training, method='cart', printFlag=FALSE, seed = 1)
+# df.training <- complete(mice_mod)
+
 
 
 # prepare the data to make the format useable by the pipeline
@@ -46,11 +64,15 @@ predicttion.single.best <- predictAndEvaluation(model.best = model.selection.out
                                     prevalence = 0.1,
                                     is.ensemble = FALSE)
 
+# The performance of the single best model, given sensitivity and specificity thresholds
+predicttion.single.best.2 <- predictAndEvaluationSen(model.best = model.selection.output$model.best,
+                                    test.data = data.norm$testTransformed,
+                                    prevalence = 0.1,
+                                    is.ensemble = FALSE,
+                                    sen_min = 0.7,
+                                    spe_min = 0.3)
 # The performance of the ensemble model
 predicttion.ensemble <- predictAndEvaluation(model.best = model.selection.output$model.ensemble,
                                     test.data = data.norm$testTransformed,
                                     prevalence = 0.1,
                                     is.ensemble = TRUE)
-
-
-
